@@ -1,23 +1,12 @@
-#include <iostream>
-#include "Game.h"
+﻿#include "Board.h"
 
-int main()
-{
-    //Init Game engine
-    Game game;
+int main() {
 
+    // Create a chees board object
+    Board board;
 
-    //Game loop
-    while (game.running())
-    {
+    // Showing a chees board
+    board.draw();
 
-        //Update
-        game.update();
-
-        //Render
-        game.render();
-    }
-
-    //End of application
     return 0;
 }

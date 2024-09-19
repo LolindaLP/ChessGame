@@ -4,6 +4,11 @@
 #include <memory>
 #include "Piece.h"
 #include "King.h"
+#include "Queen.h"
+#include "Pawn.h"
+#include "Knight.h"
+#include "Rook.h"
+#include "Bishop.h"
 
 // Board class to handle rendering and interaction
 class Board {
@@ -16,9 +21,11 @@ private:
     sf::Vector2i selectedPiecePosition;  // Логическая позиция выбранной фигуры
     bool isDragging = false;             // Флаг, указывает, перетаскиваем ли фигуру
     Piece* draggedPiece = nullptr;       // Указатель на перетаскиваемую фигуру
+    
 
 public:
-    // Constructor initializes the window and the board squares
+    Color currentTurn;// Constructor initializes the window and the board squares
+
     Board();
 
     // Method to initialize the board (create squares and set their colors)
@@ -34,7 +41,14 @@ public:
     
     void placePiece(const sf::Vector2i& mousePos);
 
+    bool isPathClear(sf::Vector2i newPosition, sf::Vector2i position);
+
+    void removePiece(Piece* pieceToRemove);
+
+    Piece* getPieceAt(const sf::Vector2i& pos) const;
+
     // Helper function to render the board and pieces
     void renderBoard();
 
+    void switchTurn();
 };

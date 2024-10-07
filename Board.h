@@ -9,6 +9,7 @@
 #include "Knight.h"
 #include "Rook.h"
 #include "Bishop.h"
+#include "globals.h"
 
 // Board class to handle rendering and interaction
 class Board {
@@ -21,9 +22,9 @@ private:
     sf::Vector2i selectedPiecePosition;  // Логическая позиция выбранной фигуры
     bool isDragging = false;             // Флаг, указывает, перетаскиваем ли фигуру
     Piece* draggedPiece = nullptr;       // Указатель на перетаскиваемую фигуру
-    
 
 public:
+    bool boardRendered = false; // Flag to check if the board is already rendered
     Color currentTurn;// Constructor initializes the window and the board squares
 
     Board();
@@ -51,4 +52,6 @@ public:
     void renderBoard();
 
     void switchTurn();
+
+    void checkForCheck(Color currentTurnColor);
 };

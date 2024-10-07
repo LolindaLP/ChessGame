@@ -8,13 +8,14 @@ Piece::Piece(Color color, sf::Vector2i position)
 Piece::~Piece() {}
 
 // Draw method
-void Piece::draw(sf::RenderWindow& window) {
+void Piece::draw(sf::RenderWindow& window           ) {
+    // TODO: Check if in window.draw() this check isn't already present
     if (!texture.getSize().x || !texture.getSize().y) {
         return;
     }
     window.draw(sprite);
 }
-
+// TODO: Maybe no need for snapping like this, just set chessPos = squarePos
 void Piece::snapToGrid()
 {
     sprite.setPosition(position.x * tileSize, position.y * tileSize);

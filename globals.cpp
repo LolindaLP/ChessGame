@@ -3,3 +3,4 @@
 
 bool enPassantPossibility = false; // Изначально false
 bool gameOver = false;
+bool checkCheck = false;

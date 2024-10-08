@@ -323,13 +323,13 @@ bool Board::isPathClear(sf::Vector2i newPosition, sf::Vector2i position) {
     int dx = newPosition.x - position.x;
     int dy = newPosition.y - position.y;
 
-    // Определение направления движения
+    // Vector of the movement
     int stepX = (dx == 0) ? 0 : (dx > 0) ? 1 : -1;
     int stepY = (dy == 0) ? 0 : (dy > 0) ? 1 : -1;
 
     sf::Vector2i currentPos = position;
 
-    // Проверяем клетки на пути до newPosition
+    // Check squares on the way for newPosition
     while (currentPos != newPosition) {
         currentPos.x += stepX;
         currentPos.y += stepY;
@@ -348,14 +348,14 @@ bool Board::isPathClear(sf::Vector2i newPosition, sf::Vector2i position) {
 
 
 void Board::removePiece(Piece* pieceToRemove) {
-    // Ищем фигуру в массиве pieces по её позиции
+    // Search for piece by position
     auto it = std::find_if(pieces.begin(), pieces.end(),
         [pieceToRemove](const std::unique_ptr<Piece>& piece) {
             return piece.get() == pieceToRemove;
         });
-    // Если фигура найдена, удаляем её
+    // Delete piece if found
     if (it != pieces.end()) {
-        pieces.erase(it); // Удаление из вектора автоматически освободит память через unique_ptr
+        pieces.erase(it);
     }
 }
 

@@ -25,7 +25,6 @@ bool Pawn::isValidMove(sf::Vector2i newPosition, sf::Vector2i position, Piece* t
 
     // Check if the pawn is moving forward by 2 squares from its initial position
     if (dx == 0 && dy == 2 * direction && position.y == startRow && targetPiece == nullptr) {
-        // Активируем возможность взятия на проходе
         enPassantPossibility = true;
         std::cout << "true\n";
         return true;
@@ -42,15 +41,13 @@ bool Pawn::isValidMove(sf::Vector2i newPosition, sf::Vector2i position, Piece* t
     if (std::abs(dx) == 1 && dy == direction) {
         // If there's a target piece, make sure it's of the opposite color
         if (targetPiece != nullptr && targetPiece->getColor() != this->getColor()) {
-            // Обычный захват по диагонали
             enPassantPossibility = false;
             std::cout << "false\n";
             return true;
         }
 
-        // Взятие на проходе
         if (enPassantPossibility) {
-            return true;  // Возвращаем true для взятия на проходе
+            return true;
         }
     }
 

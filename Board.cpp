@@ -151,6 +151,37 @@ void Board::placePiece(const sf::Vector2i& mousePos) {
         // Check if the move is valid for the dragged piece
         if (draggedPiece->isValidMove(newPosition, draggedPiece->getPosition(), targetPiece)) {
 
+            if (checkCheck) {
+                // If the King is moving, ensure the new position is not under attack
+                for (const auto& piece : pieces) {
+                    if (piece->getColor() != currentTurn) {  // Only check opponent's pieces
+
+                        // Get the piece at the new position
+                        auto targetPiece = getPieceAt(newPosition);
+
+                        // Allow the king to capture if the target is an opponent's piece
+                        if (targetPiece != nullptr && targetPiece->getColor() != currentTurn) {
+                            // King can capture the opponent's piece, no need to check further
+                            continue;
+                        }
+
+                        // Check if the opponent's piece can move to the new king's position
+                        if (piece->isValidMove(newPosition, piece->getPosition(), getPieceAt(newPosition))) {
+
+                            // Additional check for non-knight pieces: Make sure the path is clear
+                            if (!dynamic_cast<Knight*>(piece.get()) && !isPathClear(newPosition, piece->getPosition())) {
+                                continue;  // Skip if the path to the king is not clear
+                            }
+
+                            // If an opponent piece can move to the new king's position, cancel the move
+                            draggedPiece->snapToGrid();
+                            draggedPiece = nullptr;
+                            return;
+                        }
+                    }
+                }
+            }
+
             // For non-knight pieces, check if the path is clear
             if (!dynamic_cast<Knight*>(draggedPiece) && !isPathClear(newPosition, draggedPiece->getPosition())) {
                 // If the path is blocked, reset the piece
@@ -165,7 +196,6 @@ void Board::placePiece(const sf::Vector2i& mousePos) {
                 draggedPiece = nullptr;
                 return;
             }
-
 
             // Castling logic for the King
             if (auto king = dynamic_cast<King*>(draggedPiece)) {
@@ -272,41 +302,12 @@ void Board::placePiece(const sf::Vector2i& mousePos) {
                 removePiece(targetPiece);
                 enPassantPossibility = false;
             }
-
+            
             // Set the new position and snap to the grid
             draggedPiece->setPosition(newPosition);
             draggedPiece->snapToGrid();
             //Handle Check check
             checkForCheck(currentTurn);
-            if (checkCheck) {
-                if (!dynamic_cast<King*>(draggedPiece)) {
-                    // If the dragged piece is not the King, cancel the move
-                    draggedPiece->snapToGrid();  // Return to original position
-                    draggedPiece = nullptr;
-                    return;
-                }
-                else {
-                    // If the King is moving, ensure the new position is not under attack
-                    for (const auto& piece : pieces) {
-                        if (piece->getColor() != currentTurn) {  // Only check opponent's pieces
-
-                            // Check if the opponent's piece can move to the new king's position
-                            if (piece->isValidMove(newPosition, piece->getPosition(), getPieceAt(newPosition))) {
-
-                                // Additional check for non-knight pieces: Make sure the path is clear
-                                if (!dynamic_cast<Knight*>(piece.get()) && !isPathClear(newPosition, piece->getPosition())) {
-                                    continue;  // Skip if the path to the king is not clear
-                                }
-
-                                // If an opponent piece can move to the new king's position, cancel the move
-                                draggedPiece->snapToGrid();  // Return King to original position
-                                draggedPiece = nullptr;
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
             draggedPiece = nullptr;
             switchTurn(); // Switch turn only if the move is valid
         }
@@ -403,6 +404,7 @@ void Board::switchTurn() {
 void Board::checkForCheck(Color currentTurnColor) {
     // Get the opponent's king position
     Piece* opponentKing = nullptr;
+    checkCheck = false;
 
     for (const auto& piece : pieces) {
         if (King* king = dynamic_cast<King*>(piece.get())) {  // Assuming pieces is a vector of unique_ptr or shared_ptr
@@ -433,7 +435,4 @@ void Board::checkForCheck(Color currentTurnColor) {
             }
         }
     }
-
-    // No pieces threaten the opponent's king
-    checkCheck = false;
 }

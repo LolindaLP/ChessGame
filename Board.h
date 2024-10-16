@@ -14,11 +14,14 @@
 // Board class to handle rendering and interaction
 class Board {
 private:
+    // TODO: Maybe _ as suffix of member variables
     sf::RenderWindow window;                  // Window for displaying the chessboard
     sf::RectangleShape squares[8][8];         // Array to store the board's squares
     const float tileSize = 100.f;             // Size of each square in pixels
     std::vector<std::unique_ptr<Piece>> pieces; // Vector to store all pieces on the board
-    sf::Vector2f offset;  
+    // TODO: Docs
+    sf::Vector2f offset;
+    // TODO: To english
     sf::Vector2i selectedPiecePosition;  // Логическая позиция выбранной фигуры
     bool isDragging = false;             // Флаг, указывает, перетаскиваем ли фигуру
     Piece* draggedPiece = nullptr;       // Указатель на перетаскиваемую фигуру

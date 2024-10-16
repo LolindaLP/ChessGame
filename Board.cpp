@@ -67,48 +67,105 @@ void Board::initializePieces() {
 // Main loop
 void Board::run() {
 
+    // TODO try to render board once
     //renderBoard();
 
     while (window.isOpen()) {
         sf::Event event;
+
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
-                window.close();
+            switch (event.type) {
+                case sf::Event::Closed:
+                    window.close();
+                    break;
 
-            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
-            {
-                sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-                selectPiece(mousePos);
-                isDragging = true;
-            }
+                // Case for mouse button press event (Left Mouse Button)
+                case sf::Event::MouseButtonPressed:
+                    if (event.mouseButton.button == sf::Mouse::Left) {
+                        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+                        selectPiece(mousePos);  // Assuming selectPiece returns true if a piece is selected
+                        isDragging = true;
+                    }
+                    break;
 
-            if (isDragging) {
-                sf::Vector2f mousePosFloat = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+                // Case for mouse movement (only handle if dragging)
+                case sf::Event::MouseMoved:
+                    if (isDragging && draggedPiece) {
+                        sf::Vector2f mousePosFloat = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+                        draggedPiece->sprite.setPosition(mousePosFloat - offset);  // Move dragged piece
+                    }
+                    break;
 
-                if (draggedPiece) {
-                    draggedPiece->sprite.setPosition(mousePosFloat - offset);
+                // Case for mouse button release event
+                case sf::Event::MouseButtonReleased:
+                    if (event.mouseButton.button == sf::Mouse::Left && isDragging) {
+                        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+                        placePiece(mousePos);  // Place the piece in its final position
+                        isDragging = false;  // Stop dragging
+                    }
+                    break;
+
+                // Case for window resizing
+                case sf::Event::Resized:
+                {
+                    unsigned int newSize = std::min(event.size.width, event.size.height);  // Maintain 1:1 aspect ratio
+                    window.setSize(sf::Vector2u(newSize, newSize));  // Resize window to maintain square ratio
+                    break;
                 }
-                }
 
-            if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
-                if (isDragging) {
-                    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-                    placePiece(mousePos);
-                    isDragging = false;
+
+                default:
+                    break;
                 }
             }
-            // Handle window resize event
-            if (event.type == sf::Event::Resized)
-            {
-                // Keep a 1:1 aspect ratio by choosing the smaller dimension
-                unsigned int newSize = std::min(event.size.width, event.size.height);
-
-                window.setSize(sf::Vector2u(newSize, newSize));
-            }
-        }
-        renderBoard();
+    renderBoard();
     }
 }
+             //TODO: Switch for different events.
+             //Closed
+             //isLMBPressed
+             //isLMBReleased
+             //isMouseMoved
+            //if (event.type == sf::Event::Closed)
+            //    window.close();
+            //// Maybe func isLmbDown(event)
+            //if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
+            //{
+            //    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+            //    selectPiece(mousePos);
+            //    // Should you say dragging=true when nothing is selected?
+            //    // Should selectPiece return boolean "isSelected" or smth to indicate if
+            //    // some piece was under cursor?
+            //    isDragging = true;
+            //}
+
+
+            //// Maybe only for sf::Mouse::Moved?
+            //if (isDragging) {
+            //    sf::Vector2f mousePosFloat = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+            //    // TODO: Single if statement.
+            //    // It sounds strange "we are dragging but there's nothing we are dragging"
+            //    if (draggedPiece) {
+            //        draggedPiece->sprite.setPosition(mousePosFloat - offset);
+            //    }
+            //    }
+            // To function "isLmbReleased
+            //if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
+            //    if (isDragging) {
+            //        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+            //        placePiece(mousePos);
+            //        isDragging = false;
+            //    }
+            //}
+            // Handle window resize event
+            //if (event.type == sf::Event::Resized)
+            //{
+            //    // Keep a 1:1 aspect ratio by choosing the smaller dimension
+            //    unsigned int newSize = std::min(event.size.width, event.size.height);
+
+            //    window.setSize(sf::Vector2u(newSize, newSize));
+            //}
+
 
 
 void Board::selectPiece(const sf::Vector2i& mousePos) {
@@ -116,13 +173,20 @@ void Board::selectPiece(const sf::Vector2i& mousePos) {
     sf::Vector2f worldMousePos = window.mapPixelToCoords(mousePos);
 
     // Get the row and column of the clicked tile based on the world coordinates
+    // TODO: Exercise.
+    // Instead of calculating world coordinates - try to use .contains() method.
     int row = static_cast<int>(worldMousePos.y) / tileSize;
     int col = static_cast<int>(worldMousePos.x) / tileSize;
 
     // Check if there is a piece at the position and if it's the correct color
     Piece* piece = getPieceAt(sf::Vector2i(col, row));
+    sf::Vector2f tmp(mousePos.x, mousePos.y);
+    if (piece->sprite.getGlobalBounds().contains(tmp)) {
+        std::cout << "CHUJ " << std::endl;
+    }
     if (piece != nullptr && piece->getColor() == currentTurn) {
         draggedPiece = piece;
+        // TODO: Maybe don't need this second variable if we already have draggedPiece?
         selectedPiecePosition = piece->getPosition();
 
         // Get the resized bounds of the piece in world coordinates
@@ -133,7 +197,8 @@ void Board::selectPiece(const sf::Vector2i& mousePos) {
     }
 }
 
-
+// TODO: Split into few smaller methods so that it's comfy to read.
+// Also try to use .contains() method instead of calcualting world parameters.
 void Board::placePiece(const sf::Vector2i& mousePos) {
     if (draggedPiece) {
         // Convert mouse position from pixel coordinates to world coordinates
@@ -151,6 +216,7 @@ void Board::placePiece(const sf::Vector2i& mousePos) {
         // Check if the move is valid for the dragged piece
         if (draggedPiece->isValidMove(newPosition, draggedPiece->getPosition(), targetPiece)) {
 
+            // Handle check and end of the game
             if (checkCheck) {
                 // If the King is moving, ensure the new position is not under attack
                 for (const auto& piece : pieces) {
@@ -179,6 +245,51 @@ void Board::placePiece(const sf::Vector2i& mousePos) {
                             return;
                         }
                     }
+                }
+                // Check if this is a checkmate
+                bool hasLegalMoves = false;
+
+                // Iterate over all pieces of the current player
+                for (const auto& piece : pieces) {
+                    if (piece->getColor() == currentTurn) {
+                        // For each piece, check all possible positions on the board
+                        for (int row = 0; row < 8; ++row) {
+                            for (int col = 0; col < 8; ++col) {
+                                sf::Vector2i targetPosition(col, row);
+                                auto originalPosition = piece->getPosition();
+                                auto targetPiece = getPieceAt(targetPosition);
+
+                                // Check if the piece can legally move to the target position
+                                if (piece->isValidMove(targetPosition, originalPosition, targetPiece)) {
+                                    // Temporarily move the piece to the target position
+                                    piece->setPosition(targetPosition);
+
+                                    // Call checkForCheck to see if the king is still in check
+                                    checkForCheck(currentTurn);  // This will update the checkCheck flag
+
+                                    // If the king is not in check, it means this is a valid move
+                                    if (!checkCheck) {
+                                        hasLegalMoves = true;  // Found a legal move
+                                    }
+
+                                    // Move the piece back to its original position
+                                    piece->setPosition(originalPosition);
+
+                                    // If a legal move is found, break out of the loops
+                                    if (hasLegalMoves) break;
+                                }
+                            }
+                            if (hasLegalMoves) break;
+                        }
+                    }
+                    if (hasLegalMoves) break;  // No need to check further if a legal move is found
+                }
+
+                // If no legal moves are found and the king is in check, it's a checkmate
+                if (!hasLegalMoves) {
+                    std::cout << "Checkmate! " << (currentTurn == Color::WHITE ? "Black wins!" : "White wins!") << std::endl;
+                    gameOver = true;  // You can set your game-over flag here
+                    return;
                 }
             }
 
@@ -288,17 +399,6 @@ void Board::placePiece(const sf::Vector2i& mousePos) {
 
             // Handle capture and end of game logic
             if (targetPiece != nullptr && targetPiece->getColor() != draggedPiece->getColor()) {
-                if (dynamic_cast<King*>(targetPiece)) {
-                    // End game logic
-                    std::cout << "Game over!";
-                    if (targetPiece->getColor() == Color::WHITE) {
-                        std::cout << "Black wins!" << std::endl;
-                    }
-                    else {
-                        std::cout << "White wins!" << std::endl;
-                    }
-                    gameOver = true;
-                }
                 removePiece(targetPiece);
                 enPassantPossibility = false;
             }
@@ -318,7 +418,6 @@ void Board::placePiece(const sf::Vector2i& mousePos) {
         }
     }
 }
-
 
 bool Board::isPathClear(sf::Vector2i newPosition, sf::Vector2i position) {
     int dx = newPosition.x - position.x;
@@ -389,6 +488,9 @@ void Board::renderBoard() {
     //}
 
     for (const auto& piece : pieces) {
+        // TODO: Implement this on piece type
+        //  void draw(const Drawable& drawable, const RenderStates& states = RenderStates::Default);
+        // window.draw(piece.get())
         piece->draw(window);
     }
 

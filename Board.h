@@ -22,9 +22,8 @@ private:
     // TODO: Docs
     sf::Vector2f offset;
     // TODO: To english
-    sf::Vector2i selectedPiecePosition;  // Логическая позиция выбранной фигуры
-    bool isDragging = false;             // Флаг, указывает, перетаскиваем ли фигуру
-    Piece* draggedPiece = nullptr;       // Указатель на перетаскиваемую фигуру
+    sf::Vector2i selectedPiecePosition;             
+    Piece* draggedPiece = nullptr;       
 
 public:
     bool boardRendered = false; // Flag to check if the board is already rendered
@@ -45,6 +44,22 @@ public:
     
     void placePiece(const sf::Vector2i& mousePos);
 
+    bool isValidMove(Piece* piece, const sf::Vector2i& newPosition);
+
+    bool isInCheck(Color color);
+
+    bool isCheckmate(Color color);
+
+    void handleCastling(King* king, const sf::Vector2i& newPosition);
+
+    void moveRookForCastling(const sf::Vector2i& rookPos, const sf::Vector2i& newPos);
+
+    void handlePawnPromotion(Pawn* pawn, const sf::Vector2i& newPosition);
+
+    void handleCapture(Piece* draggedPiece, const sf::Vector2i& newPosition);
+
+    void handleEnPassant(Pawn* pawn, const sf::Vector2i& newPosition);
+
     bool isPathClear(sf::Vector2i newPosition, sf::Vector2i position);
 
     void removePiece(Piece* pieceToRemove);
@@ -55,6 +70,4 @@ public:
     void renderBoard();
 
     void switchTurn();
-
-    void checkForCheck(Color currentTurnColor);
 };

@@ -83,14 +83,13 @@ void Board::run() {
                 case sf::Event::MouseButtonPressed:
                     if (event.mouseButton.button == sf::Mouse::Left) {
                         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-                        selectPiece(mousePos);  // Assuming selectPiece returns true if a piece is selected
-                        isDragging = true;
+                        selectPiece(mousePos);
                     }
                     break;
 
                 // Case for mouse movement (only handle if dragging)
                 case sf::Event::MouseMoved:
-                    if (isDragging && draggedPiece) {
+                    if (draggedPiece) {
                         sf::Vector2f mousePosFloat = window.mapPixelToCoords(sf::Mouse::getPosition(window));
                         draggedPiece->sprite.setPosition(mousePosFloat - offset);  // Move dragged piece
                     }
@@ -98,10 +97,9 @@ void Board::run() {
 
                 // Case for mouse button release event
                 case sf::Event::MouseButtonReleased:
-                    if (event.mouseButton.button == sf::Mouse::Left && isDragging) {
+                    if (event.mouseButton.button == sf::Mouse::Left) {
                         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
                         placePiece(mousePos);  // Place the piece in its final position
-                        isDragging = false;  // Stop dragging
                     }
                     break;
 
@@ -113,7 +111,6 @@ void Board::run() {
                     break;
                 }
 
-
                 default:
                     break;
                 }
@@ -121,51 +118,11 @@ void Board::run() {
     renderBoard();
     }
 }
-             //TODO: Switch for different events.
-             //Closed
-             //isLMBPressed
-             //isLMBReleased
-             //isMouseMoved
-            //if (event.type == sf::Event::Closed)
-            //    window.close();
-            //// Maybe func isLmbDown(event)
-            //if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
-            //{
-            //    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-            //    selectPiece(mousePos);
-            //    // Should you say dragging=true when nothing is selected?
-            //    // Should selectPiece return boolean "isSelected" or smth to indicate if
-            //    // some piece was under cursor?
-            //    isDragging = true;
-            //}
-
-
-            //// Maybe only for sf::Mouse::Moved?
-            //if (isDragging) {
-            //    sf::Vector2f mousePosFloat = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-            //    // TODO: Single if statement.
-            //    // It sounds strange "we are dragging but there's nothing we are dragging"
-            //    if (draggedPiece) {
-            //        draggedPiece->sprite.setPosition(mousePosFloat - offset);
-            //    }
-            //    }
-            // To function "isLmbReleased
-            //if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
-            //    if (isDragging) {
-            //        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-            //        placePiece(mousePos);
-            //        isDragging = false;
-            //    }
-            //}
-            // Handle window resize event
-            //if (event.type == sf::Event::Resized)
-            //{
-            //    // Keep a 1:1 aspect ratio by choosing the smaller dimension
-            //    unsigned int newSize = std::min(event.size.width, event.size.height);
-
-            //    window.setSize(sf::Vector2u(newSize, newSize));
-            //}
-
+//TODO: Switch for different events.
+//Closed
+//isLMBPressed
+//isLMBReleased
+//isMouseMoved
 
 
 void Board::selectPiece(const sf::Vector2i& mousePos) {
@@ -181,9 +138,9 @@ void Board::selectPiece(const sf::Vector2i& mousePos) {
     // Check if there is a piece at the position and if it's the correct color
     Piece* piece = getPieceAt(sf::Vector2i(col, row));
     sf::Vector2f tmp(mousePos.x, mousePos.y);
-    if (piece->sprite.getGlobalBounds().contains(tmp)) {
-        std::cout << "CHUJ " << std::endl;
-    }
+    //if (piece->sprite.getGlobalBounds().contains(tmp)) {
+    //    std::cout << "CHUJ " << std::endl;
+    //}
     if (piece != nullptr && piece->getColor() == currentTurn) {
         draggedPiece = piece;
         // TODO: Maybe don't need this second variable if we already have draggedPiece?
@@ -197,227 +154,245 @@ void Board::selectPiece(const sf::Vector2i& mousePos) {
     }
 }
 
-// TODO: Split into few smaller methods so that it's comfy to read.
-// Also try to use .contains() method instead of calcualting world parameters.
+
 void Board::placePiece(const sf::Vector2i& mousePos) {
     if (draggedPiece) {
-        // Convert mouse position from pixel coordinates to world coordinates
         sf::Vector2f worldMousePos = window.mapPixelToCoords(mousePos);
-
-        // Get the row and column of the target tile based on the world coordinates
         int row = static_cast<int>(worldMousePos.y) / tileSize;
         int col = static_cast<int>(worldMousePos.x) / tileSize;
-
         sf::Vector2i newPosition(col, row);
 
-        // Check if there is a piece at the target position
-        Piece* targetPiece = getPieceAt(newPosition);
+        // Validate the move
+        if (isValidMove(draggedPiece, newPosition)) {
+            // Handle capture before special moves
+            handleCapture(draggedPiece, newPosition);
 
-        // Check if the move is valid for the dragged piece
-        if (draggedPiece->isValidMove(newPosition, draggedPiece->getPosition(), targetPiece)) {
-
-            // Handle check and end of the game
-            if (checkCheck) {
-                // If the King is moving, ensure the new position is not under attack
-                for (const auto& piece : pieces) {
-                    if (piece->getColor() != currentTurn) {  // Only check opponent's pieces
-
-                        // Get the piece at the new position
-                        auto targetPiece = getPieceAt(newPosition);
-
-                        // Allow the king to capture if the target is an opponent's piece
-                        if (targetPiece != nullptr && targetPiece->getColor() != currentTurn) {
-                            // King can capture the opponent's piece, no need to check further
-                            continue;
-                        }
-
-                        // Check if the opponent's piece can move to the new king's position
-                        if (piece->isValidMove(newPosition, piece->getPosition(), getPieceAt(newPosition))) {
-
-                            // Additional check for non-knight pieces: Make sure the path is clear
-                            if (!dynamic_cast<Knight*>(piece.get()) && !isPathClear(newPosition, piece->getPosition())) {
-                                continue;  // Skip if the path to the king is not clear
-                            }
-
-                            // If an opponent piece can move to the new king's position, cancel the move
-                            draggedPiece->snapToGrid();
-                            draggedPiece = nullptr;
-                            return;
-                        }
-                    }
-                }
-                // Check if this is a checkmate
-                bool hasLegalMoves = false;
-
-                // Iterate over all pieces of the current player
-                for (const auto& piece : pieces) {
-                    if (piece->getColor() == currentTurn) {
-                        // For each piece, check all possible positions on the board
-                        for (int row = 0; row < 8; ++row) {
-                            for (int col = 0; col < 8; ++col) {
-                                sf::Vector2i targetPosition(col, row);
-                                auto originalPosition = piece->getPosition();
-                                auto targetPiece = getPieceAt(targetPosition);
-
-                                // Check if the piece can legally move to the target position
-                                if (piece->isValidMove(targetPosition, originalPosition, targetPiece)) {
-                                    // Temporarily move the piece to the target position
-                                    piece->setPosition(targetPosition);
-
-                                    // Call checkForCheck to see if the king is still in check
-                                    checkForCheck(currentTurn);  // This will update the checkCheck flag
-
-                                    // If the king is not in check, it means this is a valid move
-                                    if (!checkCheck) {
-                                        hasLegalMoves = true;  // Found a legal move
-                                    }
-
-                                    // Move the piece back to its original position
-                                    piece->setPosition(originalPosition);
-
-                                    // If a legal move is found, break out of the loops
-                                    if (hasLegalMoves) break;
-                                }
-                            }
-                            if (hasLegalMoves) break;
-                        }
-                    }
-                    if (hasLegalMoves) break;  // No need to check further if a legal move is found
-                }
-
-                // If no legal moves are found and the king is in check, it's a checkmate
-                if (!hasLegalMoves) {
-                    std::cout << "Checkmate! " << (currentTurn == Color::WHITE ? "Black wins!" : "White wins!") << std::endl;
-                    gameOver = true;  // You can set your game-over flag here
-                    return;
-                }
+            // Handle special moves like castling and en passant
+            if (King* king = dynamic_cast<King*>(draggedPiece)) {
+                handleCastling(king, newPosition);
+            }
+            else if (Pawn* pawn = dynamic_cast<Pawn*>(draggedPiece)) {
+                handlePawnPromotion(pawn, newPosition);
+                handleEnPassant(pawn, newPosition);
             }
 
-            // For non-knight pieces, check if the path is clear
-            if (!dynamic_cast<Knight*>(draggedPiece) && !isPathClear(newPosition, draggedPiece->getPosition())) {
-                // If the path is blocked, reset the piece
-                draggedPiece->snapToGrid();
-                draggedPiece = nullptr;
-                return;
-            }
-
-            // If a piece of the same color is on the target cell, block the move
-            if (targetPiece != nullptr && targetPiece->getColor() == draggedPiece->getColor()) {
-                draggedPiece->snapToGrid();  // Return dragged piece to its original position
-                draggedPiece = nullptr;
-                return;
-            }
-
-            // Castling logic for the King
-            if (auto king = dynamic_cast<King*>(draggedPiece)) {
-                bool isWhiteKing = (king->getColor() == Color::WHITE);
-                bool isBlackKing = (king->getColor() == Color::BLACK);
-
-                // White king-side castling
-                if (isWhiteKing && isPathClear(sf::Vector2i(4, 7), sf::Vector2i(7, 7)) && newPosition == sf::Vector2i(6, 7)) {
-                    Piece* rook = getPieceAt(sf::Vector2i(7, 7)); // Rook on h1
-                    if (rook != nullptr && dynamic_cast<Rook*>(rook) && rook->getColor() == Color::WHITE) {
-                        rook->setPosition(sf::Vector2i(5, 7)); // Move rook to f1
-                        rook->snapToGrid();
-                        king->setPosition(sf::Vector2i(6, 7)); // Move king to g1
-                        king->snapToGrid();
-                    }
-                }
-
-                // Black king-side castling
-                if (isBlackKing && isPathClear(sf::Vector2i(4, 0), sf::Vector2i(7, 0)) && newPosition == sf::Vector2i(6, 0)) {
-                    Piece* rook = getPieceAt(sf::Vector2i(7, 0)); // Rook on h8
-                    if (rook != nullptr && dynamic_cast<Rook*>(rook) && rook->getColor() == Color::BLACK) {
-                        rook->setPosition(sf::Vector2i(5, 0)); // Move rook to f8
-                        rook->snapToGrid();
-                        king->setPosition(sf::Vector2i(6, 0)); // Move king to g8
-                        king->snapToGrid();
-                    }
-                }
-
-                // White queen-side castling
-                if (isWhiteKing && isPathClear(sf::Vector2i(4, 7), sf::Vector2i(0, 7)) && newPosition == sf::Vector2i(2, 7)) {
-                    Piece* rook = getPieceAt(sf::Vector2i(0, 7)); // Rook on a1
-                    if (rook != nullptr && dynamic_cast<Rook*>(rook) && rook->getColor() == Color::WHITE) {
-                        rook->setPosition(sf::Vector2i(3, 7)); // Move rook to d1
-                        rook->snapToGrid();
-                        king->setPosition(sf::Vector2i(2, 7)); // Move king to c1
-                        king->snapToGrid();
-                    }
-                }
-
-                // Black queen-side castling
-                if (isBlackKing && isPathClear(sf::Vector2i(4, 0), sf::Vector2i(0, 0)) && newPosition == sf::Vector2i(2, 0)) {
-                    Piece* rook = getPieceAt(sf::Vector2i(0, 0)); // Rook on a8
-                    if (rook != nullptr && dynamic_cast<Rook*>(rook) && rook->getColor() == Color::BLACK) {
-                        rook->setPosition(sf::Vector2i(3, 0)); // Move rook to d8
-                        rook->snapToGrid();
-                        king->setPosition(sf::Vector2i(2, 0)); // Move king to c8
-                        king->snapToGrid();
-                    }
-                }
-            }
-
-            // Pawn promotion and en passant logic
-            if (auto pawn = dynamic_cast<Pawn*>(draggedPiece)) {
-                bool isWhitePawn = (pawn->getColor() == Color::WHITE);
-                bool isBlackPawn = (pawn->getColor() == Color::BLACK);
-
-                // Pawn promotion
-                if (isWhitePawn && row == 0) {
-                    removePiece(pawn);
-                    auto newQueen = std::make_unique<Queen>(Color::WHITE, newPosition);
-                    newQueen->snapToGrid();
-                    pieces.push_back(std::move(newQueen));
-                }
-
-                if (isBlackPawn && row == 7) {
-                    removePiece(pawn);
-                    auto newQueen = std::make_unique<Queen>(Color::BLACK, newPosition);
-                    newQueen->snapToGrid();
-                    pieces.push_back(std::move(newQueen));
-                }
-
-                // En passant capture logic
-                if (enPassantPossibility) {
-                    if (isWhitePawn) {
-                        Piece* capturedPawn = getPieceAt(sf::Vector2i(newPosition.x, newPosition.y + 1));
-                        if (capturedPawn && capturedPawn->getColor() == Color::BLACK) {
-                            removePiece(capturedPawn);
-                            enPassantPossibility = false;
-                        }
-                    }
-                    else {
-                        Piece* capturedPawn = getPieceAt(sf::Vector2i(newPosition.x, newPosition.y - 1));
-                        if (capturedPawn && capturedPawn->getColor() == Color::WHITE) {
-                            removePiece(capturedPawn);
-                            enPassantPossibility = false;
-                        }
-                    }
-                }
-            }        
-
-            // Handle capture and end of game logic
-            if (targetPiece != nullptr && targetPiece->getColor() != draggedPiece->getColor()) {
-                removePiece(targetPiece);
-                enPassantPossibility = false;
-            }
-            
-            // Set the new position and snap to the grid
+            // Update the piece's position and snap it to the grid
             draggedPiece->setPosition(newPosition);
             draggedPiece->snapToGrid();
-            //Handle Check check
-            checkForCheck(currentTurn);
-            draggedPiece = nullptr;
-            switchTurn(); // Switch turn only if the move is valid
+
+            // Now switch the turn before checking for check/checkmate
+            switchTurn();
+
+            // Check if the opponent is in check
+            if (isInCheck(currentTurn)) {
+                // If the opponent is in check, check for checkmate
+                if (isCheckmate(currentTurn)) {
+                    std::cout << "Checkmate! "
+                        << (currentTurn == Color::WHITE ? "Black wins!" : "White wins!")
+                        << std::endl;
+                    gameOver = true;
+                }
+                else {
+                    // Only in check, not checkmate
+                    std::cout << "Check! "
+                        << (currentTurn == Color::WHITE ? "White" : "Black")
+                        << " must save their king!" << std::endl;
+                }
+            }
         }
         else {
             // Invalid move, reset piece to original position
             draggedPiece->snapToGrid();
-            draggedPiece = nullptr;
+        }
+
+        // Reset dragged piece after move or reset
+        draggedPiece = nullptr;
+    }
+}
+
+
+bool Board::isValidMove(Piece* piece, const sf::Vector2i& newPosition) {
+    Piece* targetPiece = getPieceAt(newPosition);
+
+    // Check if the move is valid for the piece
+    if (!piece->isValidMove(newPosition, piece->getPosition(), targetPiece)) {
+        return false;
+    }
+
+    // For non-knight pieces, check if the path is clear
+    if (!dynamic_cast<Knight*>(piece) && !isPathClear(newPosition, piece->getPosition())) {
+        return false;
+    }
+
+    // Ensure the target isn't occupied by a piece of the same color
+    if (targetPiece && targetPiece->getColor() == piece->getColor()) {
+        return false;
+    }
+
+    // Simulate the move by temporarily removing the target piece (if any) from the board
+    auto originalPosition = piece->getPosition();
+    Piece* capturedPiece = targetPiece;  // Capture the target piece if it exists
+
+    // Temporarily move the piece
+    piece->setPosition(newPosition);
+
+    // Temporarily remove the captured piece from the board by skipping it in validation
+    if (capturedPiece) {
+        capturedPiece->setPosition(sf::Vector2i(-1, -1));  // Set to an invalid position, or simply skip it
+    }
+
+    // Check if this move leaves the player's king in check
+    bool validMove = !isInCheck(piece->getColor());
+
+    // Restore the piece's original position
+    piece->setPosition(originalPosition);
+
+    // Restore the captured piece to its original position if it was removed
+    if (capturedPiece) {
+        capturedPiece->setPosition(newPosition);
+    }
+
+    return validMove;
+}
+
+
+bool Board::isInCheck(Color currentTurnColor) {
+    // Get the current player's king
+    Piece* currentKing = nullptr;
+
+    // Find the current player's king
+    for (const auto& piece : pieces) {
+        if (King* king = dynamic_cast<King*>(piece.get())) {
+            if (king->getColor() == currentTurnColor) {  // Current player's king
+                currentKing = king;
+                break;  // No need to check further, we found the king
+            }
+        }
+    }
+
+    // Ensure the current player's king is found
+    if (currentKing == nullptr) return false;
+
+    sf::Vector2i kingPosition = currentKing->getPosition();
+
+    // Check if any of the opponent's pieces can move to the current king's position
+    for (const auto& piece : pieces) {
+        if (piece->getColor() != currentTurnColor) {  // Only check opponent's pieces
+
+            // Check if the piece can move to the current king's position
+            if (piece->isValidMove(kingPosition, piece->getPosition(), getPieceAt(kingPosition))) {
+
+                // For non-knight pieces, ensure the path is clear
+                if (!dynamic_cast<Knight*>(piece.get()) && !isPathClear(kingPosition, piece->getPosition())) {
+                    continue;
+                }
+
+                // The king is in check
+                return true;
+            }
+        }
+    }
+
+    return false;  // No opponent piece can attack the king
+}
+
+
+bool Board::isCheckmate(Color color) {
+    for (const auto& piece : pieces) {
+        if (piece->getColor() == color) {
+            auto originalPosition = piece->getPosition();
+            for (int row = 0; row < 8; ++row) {
+                for (int col = 0; col < 8; ++col) {
+                    sf::Vector2i newPosition(col, row);
+                    Piece* targetPiece = getPieceAt(newPosition);
+                    if (piece->isValidMove(newPosition, originalPosition, targetPiece)) {
+                        // Temporarily move the piece and check for check
+                        piece->setPosition(newPosition);
+                        if (!isInCheck(color)) {
+                            piece->setPosition(originalPosition); // Restore position
+                            return false; // Legal move found
+                        }
+                        piece->setPosition(originalPosition); // Restore position
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
+
+void Board::handleCastling(King* king, const sf::Vector2i& newPosition) {
+    bool isWhiteKing = (king->getColor() == Color::WHITE);
+    bool isBlackKing = (king->getColor() == Color::BLACK);
+
+    // White king-side castling
+    if (isWhiteKing && isPathClear(sf::Vector2i(4, 7), sf::Vector2i(7, 7)) && newPosition == sf::Vector2i(6, 7)) {
+        moveRookForCastling(sf::Vector2i(7, 7), sf::Vector2i(5, 7)); // Move white rook from h1 to f1
+    }
+    // Handle other castling scenarios similarly
+}
+
+
+void Board::moveRookForCastling(const sf::Vector2i& rookPos, const sf::Vector2i& newPos) {
+    Piece* rook = getPieceAt(rookPos);
+    if (rook && dynamic_cast<Rook*>(rook)) {
+        rook->setPosition(newPos);
+        rook->snapToGrid();
+    }
+}
+
+
+void Board::handlePawnPromotion(Pawn* pawn, const sf::Vector2i& newPosition) {
+    bool isWhitePawn = (pawn->getColor() == Color::WHITE);
+    bool isBlackPawn = (pawn->getColor() == Color::BLACK);
+
+    // Check if pawn reaches the last row for promotion
+    if ((isWhitePawn && newPosition.y == 0) || (isBlackPawn && newPosition.y == 7)) {
+        // Remove the pawn
+        removePiece(pawn);
+
+        // Create and add a new Queen at the pawn's position
+        auto newQueen = std::make_unique<Queen>(pawn->getColor(), newPosition);
+        newQueen->snapToGrid();
+        pieces.push_back(std::move(newQueen));
+    }
+}
+
+
+void Board::handleEnPassant(Pawn* pawn, const sf::Vector2i& newPosition) {
+    // En passant capture logic
+    if (enPassantPossibility) {
+        Piece* capturedPawn = nullptr;
+
+        if (pawn->getColor() == Color::WHITE) {
+            // White captures black pawn
+            capturedPawn = getPieceAt(sf::Vector2i(newPosition.x, newPosition.y + 1));
+        }
+        else if (pawn->getColor() == Color::BLACK) {
+            // Black captures white pawn
+            capturedPawn = getPieceAt(sf::Vector2i(newPosition.x, newPosition.y - 1));
+        }
+
+        if (capturedPawn && capturedPawn->getColor() != pawn->getColor() && dynamic_cast<Pawn*>(capturedPawn)) {
+            removePiece(capturedPawn);
+            enPassantPossibility = false;
         }
     }
 }
+
+
+void Board::handleCapture(Piece* draggedPiece, const sf::Vector2i& newPosition) {
+    // Check if there's a piece at the target position
+    Piece* targetPiece = getPieceAt(newPosition);
+
+    // If there is a piece, and it's of the opposite color, capture it
+    if (targetPiece != nullptr && targetPiece->getColor() != draggedPiece->getColor()) {
+        removePiece(targetPiece);  // Capture the piece
+        enPassantPossibility = false;  // Reset en passant flag after any capture
+    }
+}
+
 
 bool Board::isPathClear(sf::Vector2i newPosition, sf::Vector2i position) {
     int dx = newPosition.x - position.x;
@@ -500,41 +475,4 @@ void Board::renderBoard() {
 
 void Board::switchTurn() {
     currentTurn = (currentTurn == Color::WHITE) ? Color::BLACK : Color::WHITE;
-}
-
-
-void Board::checkForCheck(Color currentTurnColor) {
-    // Get the opponent's king position
-    Piece* opponentKing = nullptr;
-    checkCheck = false;
-
-    for (const auto& piece : pieces) {
-        if (King* king = dynamic_cast<King*>(piece.get())) {  // Assuming pieces is a vector of unique_ptr or shared_ptr
-            if (king->getColor() != currentTurnColor) {  // Opponent's king
-                opponentKing = king;
-                break;
-            }
-        }
-    }
-
-    sf::Vector2i kingPosition = opponentKing->getPosition();  // Get the opponent king's position
-
-    // Check if any of the current player's pieces can move to the opponent king's position
-    for (const auto& piece : pieces) {
-        if (piece->getColor() == currentTurnColor) {  // Only check current player's pieces
-
-            // Check if the piece can move to the opponent king's position
-            if (piece->isValidMove(kingPosition, piece->getPosition(), getPieceAt(kingPosition))) {
-
-                // Additional check for non-knight pieces: Make sure the path is clear
-                if (!dynamic_cast<Knight*>(piece.get()) && !isPathClear(kingPosition, piece->getPosition())) {
-                    continue;  // Skip if the path to the king is not clear
-                }
-
-                // The king is in check
-                std::cerr << "CHECK!" << std::endl;
-                checkCheck = true;
-            }
-        }
-    }
 }

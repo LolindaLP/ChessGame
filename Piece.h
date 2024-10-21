@@ -38,5 +38,4 @@ public:
 
     // Pure virtual method to validate moves, to be implemented in derived classes
     virtual bool isValidMove(sf::Vector2i newPosition, sf::Vector2i position, Piece* targetPiece) const = 0;
-
 };
